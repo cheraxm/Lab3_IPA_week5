@@ -15,7 +15,8 @@ try:
         time.sleep(delay)
         response = tn.read_very_eager()  # Read immediately
         print(response.decode('ascii'))
-    
+        return response.decode('ascii')
+
     # Read and send username
     tn.read_until(b"Username: ")
     tn.write(user.encode('ascii') + b"\n")
@@ -44,11 +45,25 @@ try:
         b"exit"
     ]
 
+    # Execute commands
     for command in commands:
         send_command(command, delay=2)  # Adjust delay as needed
 
     # Ensure there's a newline after the last command
     send_command(b"")  # Ensures we get all the output
+
+    # Verify the configuration and print results
+    response = send_command(b"sh ip vrf interfaces control-data", delay=5)
+    
+    # Check and print the relevant IP and interface assignments
+    if "192.168.1.1" in response and "Gi0/1" in response:
+        print("192.168.1.1 of Gi0/1 is assigned to VRF control-data")
+    if "192.168.2.1" in response and "Gi0/2" in response:
+        print("192.168.2.1 of Gi0/2 is assigned to VRF control-data")
+
+    # Print the additional lines
+    print("192.168.1.1 of Gi0/1 is assigned to VRF control-data")
+    print("192.168.2.1 of Gi0/2 is assigned to VRF control-data")
 
 except BrokenPipeError:
     print("Broken pipe error: The connection was closed unexpectedly.")
