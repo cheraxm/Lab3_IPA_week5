@@ -1,10 +1,11 @@
 import pexpect
+import os
 
 PROMPT = '#'
 IP = '172.31.115.3'
-USERNAME = 'admin'
-PASSWORD = 'cisco'
-result = b''
+USERNAME = os.environ.get('TELNET_USER')
+PASSWORD = os.environ.get('TELNET_PASSWORD')
+# result = b''
 
 child = pexpect.spawn('telnet ' + IP)
 child.expect('Username:')
@@ -30,7 +31,7 @@ child.sendline('exit')
 print("Loopback0 172.16.1.1 is created on 172.31.115.3")
 
 
-result2 = b''
+# result2 = b''
 child2 = pexpect.spawn('telnet 172.31.115.4')
 child2.expect('Username:')
 child2.sendline(USERNAME)
