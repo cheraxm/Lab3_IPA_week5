@@ -1,72 +1,51 @@
 import paramiko
-import logging
-import os
 import time
+import re
 
-# Setup logging
-logging.basicConfig(level=logging.DEBUG)
-paramiko.util.log_to_file('paramiko.log')
-
-# Define constants
+device_ip = "172.31.115.4"
 USERNAME = 'admin'
-KEY_PATH = '/home/chuti/.ssh/adminR2_id_rsa'
-devices_ip = "172.31.115.4"
+KEY_PATH = '/home/chuti/.ssh/id_rsa'
 
-# Initialize SSH client
+interfaces = [[
+    b"int g0/1\n", 
+    b"vrf forwarding control-data\n", 
+    b"ip address 192.168.2.2 255.255.255.0\n", 
+    b"no shut\n", 
+    b"exit\n"
+], [
+    b"int g0/2\n", 
+    b"vrf forwarding control-data\n", 
+    b"ip address 192.168.3.1 255.255.255.0\n", 
+    b"no shut\n", 
+    b"exit\n"
+], [
+    b"int g0/3\n", 
+    b"vrf forwarding control-data\n", 
+    b"ip address dhcp\n", 
+    b"no shut\n", 
+    b"exit\n"
+]]
+
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(
+    hostname=device_ip,
+    username=USERNAME,
+    disabled_algorithms={"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]},
+    pkey=paramiko.RSAKey.from_private_key_file("/home/chuti/.ssh/id_rsa"),
+)
+print("Connection successful")
+session = client.invoke_shell()
+for interface in interfaces:
+    for command in interface:
+        session.send(command)
 
-try:
-    print(f"Connecting to {devices_ip} with key {KEY_PATH}")
-    client.connect(hostname=devices_ip, username=USERNAME, key_filename=KEY_PATH, allow_agent=False, look_for_keys=False)
-    print("Connection successful")
-
-    # Define command sequences
-    interfaceg0_1 = [
-        "int g0/1", 
-        "vrf forwarding control-data", 
-        "ip address 192.168.2.2 255.255.255.0", 
-        "no shut", 
-        "exit"
-    ]
-
-    interfaceg0_2 = [
-        "int g0/2", 
-        "vrf forwarding control-data", 
-        "ip address 192.168.3.1 255.255.255.0", 
-        "no shut", 
-        "exit"
-    ]
-
-    interfaceg0_3 = [
-        "int g0/3", 
-        "vrf forwarding control-data", 
-        "ip address dhcp", 
-        "no shut", 
-        "exit"
-    ]
-
-    def execute_commands(commands):
-        for command in commands:
-            print(f"Executing {command}")
-            stdin, stdout, stderr = client.exec_command(command)
-            print(stdout.read().decode())
-            print("Errors:")
-            print(stderr.read().decode())
-            time.sleep(1)
-
-    # Execute commands
-    execute_commands(interfaceg0_1)
-    execute_commands(interfaceg0_2)
-    execute_commands(interfaceg0_3)
-
-except paramiko.AuthenticationException:
-    print("Authentication failed. Check your username, password, and key.")
-except paramiko.SSHException as e:
-    print(f"SSH exception: {e}")
-except FileNotFoundError as e:
-    print(f"File not found: {e}")
-except Exception as e:
-    print(f"Unexpected error: {e}")
-finally:
-    client.close()
+session.send(b"sh ip route vrf control-data\n")
+time.sleep(10)
+output = session.recv(65535).decode('utf-8')
+output = output.split('\n')
+for line in output[1:]:
+    match = re.search(r'(\S+)\s+(\S+)\s+(\S+)', line)
+    if match:
+        interface, ip, vrf = match.groups()
+        print(f"{ip} of {interface} is assigned to VRF {vrf}")
