@@ -27,23 +27,5 @@ for ip in device_ip:
     net_connect = ConnectHandler(**device)
     output = net_connect.send_config_set(commands[counter])
     router_output = net_connect.send_command('sh ip route vrf control-data')
-    ospf_route_pattern = r'(O|S\*)\s+(\d+\.\d+\.\d+\.\d+/\d+)'
-
-    matches = re.findall(ospf_route_pattern, ospf_route_pattern)
-
-    # Define router identifiers for output
-    router_identifiers = {
-        '192.168.1.0/24': 'R2',
-        '192.168.3.0/24': 'R2'
-    }
-
-    # Print results for OSPF routes
-    for protocol, network_address in matches:
-        if protocol == 'S*':
-            router = 'R1'
-            print(f"test routing {router} passes: default route found on {router}")
-        else:
-            router = router_identifiers.get(network_address, 'R1')  # Default to R1 if not found
-            print(f"test routing {router} passes: {network_address} found on {router}")
-
+    print(router_output)
     counter += 1
