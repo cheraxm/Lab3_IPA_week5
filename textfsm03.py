@@ -39,6 +39,9 @@ def get_interface_info(conn, interface_name):
     return matching_interface
 
 def main():
+    if len (sys.argv) < 2:
+        print("Usage: python3 textfsm03.py <interface_name>")
+        sys.exit(1)
     if len(sys.argv[1]) == 1 or (len(sys.argv[1]) == 1 and sys.argv[1].isdigit()):
         print("Wrong interface name format!")
         sys.exit(1)
